@@ -6,12 +6,12 @@ import time
 def main():
     """Function to create and Process events"""
     # Initializa the Generator object
-    # generator = Generator()
+    generator = Generator()
 
-    # generator.generate_events('applicant-details.csv', 'test_topic')
+    generator.generate_events('applicant-details.csv', 'test_topic')
 
     print("Sleeping for 10s......")
-    # time.sleep()
+    time.sleep(10)
 
     consumer = KafkaConsumer(topic_names=['test_topic'])
 

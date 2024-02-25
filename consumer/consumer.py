@@ -11,7 +11,7 @@ class KafkaConsumer():
 
     def __init__(self, topic_names):
         self._topic_names = topic_names
-        self._min_commit_count = 2
+        self._min_commit_count = 5
         self._output_filename = "data_output.csv"
 
         conf = {'bootstrap.servers': 'localhost:9092',
@@ -20,17 +20,12 @@ class KafkaConsumer():
 
         self._consumer = Consumer(conf)
 
-    def reset_offset(consumer, partitions):
-        
-        for p in partitions:
-            p.offset = OFFSET_BEGINNING
-        consumer.assign(partitions)
-
     def write_to_file(self,message_list):
-        print("INSIDE THE MESSAGE LIST")
+        print(message_list)
         try:
             df = pd.DataFrame.from_records(message_list)
-            df.to_csv(f"{os.getcwd()}/data/{self._output_filename}",mode='a+')
+            print(df)
+            df.to_csv(f"{os.getcwd()}/data/{self._output_filename}",mode='a')
         except Exception as e:
             print(e)
         return
@@ -39,35 +34,27 @@ class KafkaConsumer():
         try:
             message_queue = []
             running = True
-            self._consumer.subscribe(self._topic_names, on_assign=self.reset_offset)
+            self._consumer.subscribe(self._topic_names)
             message_count = 0
             while running:
                 msg = self._consumer.poll(timeout=1.0)
-                if msg is None: 
-                    print("Waiting......")
-                    print(msg)
-                    continue
+                if msg is None: continue
 
-                
-
-                if msg.error():
+                elif msg.error():
                     if msg.error().code() == KafkaError._PARTITION_EOF:
                         print(f"Topic: {msg.topic()} | Partition: {msg.partition()} Reached End at Offset: {msg.offset()}")
+                        break
 
                     elif msg.error():
                         raise KafkaException(msg.error())
-                    else:
-                        print("Inside message counter")
-                        message_count +=1
-                        message_queue.append(msg.value())
-                        if message_count % self._min_commit_count == 0:
-                            self.write_to_file(message_queue)
-                            self._consumer.commit(asynchronous=False)
-                            message_queue=[]
-        # except Exception as e:
-        #     print("Inside the Exception")
-        #     print(msg)
-        #     print(e)
+                    
+                else:
+                    message_count +=1
+                    message_queue.append(json.loads(msg.value()))
+                    if message_count % self._min_commit_count == 0:
+                        self.write_to_file(message_queue)
+                        self._consumer.commit(asynchronous=False)
+                        message_queue=[]
         finally:
             self._consumer.close()
         return

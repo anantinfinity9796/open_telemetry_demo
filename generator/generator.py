@@ -4,6 +4,7 @@ import pandas as pd
 import os
 from producer.producer import KafkaProducer
 import sys
+import json
 
 class Generator():
     """ Base class for generating events to Kafka Topics"""
